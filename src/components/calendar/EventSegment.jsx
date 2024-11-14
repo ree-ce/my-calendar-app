@@ -12,9 +12,9 @@ export const EventSegment = ({
   onEdit,
   onDelete
 }) => {
-  const rowHeight = 28;
-  const verticalPosition = weekOffset + (row * rowHeight * zoomLevel) + 32; // 減小基礎位置
-  const eventHeight = Math.min(28 * zoomLevel, rowHeight * zoomLevel - 4); // 限制最大高度
+  const rowHeight = 26;
+  const verticalPosition = weekOffset + (row * rowHeight * zoomLevel) +33; // 減小基礎位置
+  const eventHeight = Math.min(26 * zoomLevel, rowHeight * zoomLevel - 4); // 限制最大高度
 
   return (
     <div

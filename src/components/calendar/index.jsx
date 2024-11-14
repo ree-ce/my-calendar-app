@@ -214,12 +214,6 @@ const CalendarEventViewer = () => {
       monthMaxRow = Math.max(monthMaxRow, maxRow);
     });
 
-    // Calculate cell height based on maximum number of events
-    const getScaledCellHeight = (maxRows) => {
-      const contentHeight = (maxRows + 1) * baseRowHeight * zoomLevel;
-      return Math.max(baseCellHeight * zoomLevel, contentHeight + headerHeight);
-    };
-
     const days = [];
     for (let i = 0; i < firstDayOfMonth; i++) {
       days.push(
@@ -295,7 +289,7 @@ const CalendarEventViewer = () => {
       segments.map(segment => {
         const daysInSegment = Math.floor((segment.end - segment.start) / (24 * 60 * 60 * 1000)) + 1;
         const row = weekLayouts.get(week).get(segment.id);
-        const weekOffset = week * getScaledCellHeight(monthMaxRow);
+        const weekOffset = week * dimensions.cellHeight;
 
         return (
           <EventSegment
