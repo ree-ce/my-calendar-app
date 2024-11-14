@@ -331,22 +331,14 @@ const CalendarEventViewer = () => {
     // 使用實際的月份寬度來創建 grid-template-columns
     const columnsTemplate = yearMonths
       .slice(0, maxMonthsPerRow)
-      .map((_, index) => `${dimensions.monthWidth}px`)
+      .map((_) => `${dimensions.monthWidth}px`)
       .join(" ");
-
-    const marginLeft = 0;//Math.max(0, (availableWidth - monthWidth) / 2);
-
-    // 計算最佳縮放比例
-    const optimalZoom = 1;//Math.max(0.3, Math.min(availableWidth / (dimensions.monthWidth * 1.1), 1.5));
 
     const gridStyle = isGridView ? {
       display: 'grid',
       gridTemplateColumns: columnsTemplate,
       gap: `${MONTH_GAP}px`,
-      padding: '1rem',
-      width: `${dimensions.monthWidth}px`,
-      marginLeft: `${marginLeft}px`,
-      marginRight: `${marginLeft}px`
+      width: `${dimensions.monthWidth}px`
     } : {};
 
     return {

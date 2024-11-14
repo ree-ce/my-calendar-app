@@ -12,9 +12,9 @@ export const EventSegment = ({
   onEdit,
   onDelete
 }) => {
-  const rowHeight = 26;
+  const rowHeight = 26.5;
   const verticalPosition = weekOffset + (row * rowHeight * zoomLevel) +33; // 減小基礎位置
-  const eventHeight = Math.min(26 * zoomLevel, rowHeight * zoomLevel - 4); // 限制最大高度
+  const eventHeight = Math.min(26.5 * zoomLevel, rowHeight * zoomLevel - 1); // 限制最大高度
 
   return (
     <div
@@ -35,7 +35,7 @@ export const EventSegment = ({
         className="flex justify-between items-center h-full px-0.5"
         style={{
           // 根據 zoomLevel 調整字體大小
-          fontSize: `${Math.min(12 * zoomLevel, 14)}px`,
+          fontSize: `${Math.min(18 * zoomLevel, 20)}px`,
         }}
       >
         {segment.isFirstSegment && (
