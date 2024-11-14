@@ -15,13 +15,6 @@ const MONTH_GAP = 10; // 月份間距
 const BASE_CELL_WIDTH = 120; // 基礎單元格寬度
 const BASE_CELL_HEIGHT = 80; // 基礎單元格高度
 
-    // Base dimensions with adjustments for events
-    const baseCellHeight = 80;
-    const baseCellWidth = 120;
-    const baseRowHeight = 24; // Height for each event row
-    const headerHeight = 24; // Height for day numbers
-
-
 const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 0,
@@ -62,15 +55,14 @@ const CalendarEventViewer = () => {
       cellWidth: BASE_CELL_WIDTH * zoomLevel,
       cellHeight: BASE_CELL_HEIGHT * zoomLevel,
       monthGap: MONTH_GAP * zoomLevel,
+      monthWidth:BASE_CELL_WIDTH * zoomLevel* 7
     };
   }, [zoomLevel]);
 
-  // 計算單個月份的寬度（固定為7格）
-  const monthWidth = dimensions.cellWidth * 7;
 
-  useEffect(() => {
-    setZoomLevel(layoutConfig.optimalZoom);
-  }, [windowSize.width, events.length]);
+  // useEffect(() => {
+  //   setZoomLevel(layoutConfig.optimalZoom);
+  // }, [windowSize.width, events.length]);
 
   const handleZoomIn = () => {
     setZoomLevel(prev => Math.min(prev + 0.2, 1.5));
@@ -332,39 +324,34 @@ const CalendarEventViewer = () => {
 
     if (totalMonths === 0) return { gridStyle: {}, optimalZoom: 1 };
 
-
     // 根據最寬月份計算每行可容納的月份數
-    const maxMonthsPerRow = Math.floor((availableWidth + MONTH_GAP) / (monthWidth + MONTH_GAP));
+    const maxMonthsPerRow = Math.floor((availableWidth + MONTH_GAP) / (dimensions.monthWidth + MONTH_GAP));
 
-    // 限制最多 2 列
-    const optimalRows = Math.min(2, Math.ceil(totalMonths / maxMonthsPerRow));
-    const monthsPerRow = Math.ceil(totalMonths / optimalRows);
 
     // 使用實際的月份寬度來創建 grid-template-columns
     const columnsTemplate = yearMonths
-      .slice(0, monthsPerRow)
-      .map((_, index) => `${monthWidth}px`)
+      .slice(0, maxMonthsPerRow)
+      .map((_, index) => `${dimensions.monthWidth}px`)
       .join(" ");
 
     const marginLeft = 0;//Math.max(0, (availableWidth - monthWidth) / 2);
 
     // 計算最佳縮放比例
-    const optimalZoom = Math.max(0.3, Math.min(availableWidth / (monthWidth * 1.1), 1.5));
+    const optimalZoom = 1;//Math.max(0.3, Math.min(availableWidth / (dimensions.monthWidth * 1.1), 1.5));
 
     const gridStyle = isGridView ? {
       display: 'grid',
       gridTemplateColumns: columnsTemplate,
       gap: `${MONTH_GAP}px`,
       padding: '1rem',
-      width: `${monthWidth}px`,
+      width: `${dimensions.monthWidth}px`,
       marginLeft: `${marginLeft}px`,
       marginRight: `${marginLeft}px`
     } : {};
 
     return {
       gridStyle,
-      optimalZoom,
-      monthsPerRow,
+      maxMonthsPerRow,
       totalMonths
     };
   }, [windowSize.width, isGridView, events, zoomLevel]);
@@ -407,7 +394,7 @@ const CalendarEventViewer = () => {
                 key={`${year}-${month}`}
                 className="min-w-0"
                 style={{
-                  gridRow: isGridView ? Math.floor(index / layoutConfig.monthsPerRow) + 1 : 'auto'
+                  gridRow: isGridView ? Math.floor(index / layoutConfig.maxMonthsPerRow) + 1 : 'auto'
                 }}
               >
                 {renderMonth(month, year)}
