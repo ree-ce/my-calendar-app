@@ -21,6 +21,7 @@ const BASE_CELL_HEIGHT = 80; // 基礎單元格高度
     const baseRowHeight = 24; // Height for each event row
     const headerHeight = 24; // Height for day numbers
 
+
 const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 0,
@@ -173,145 +174,159 @@ const CalendarEventViewer = () => {
   }, []);
 
 
-    const renderMonth = (month, year) => {
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0);
-      const daysInMonth = endDate.getDate();
-      const firstDayOfMonth = startDate.getDay();
+  const renderMonth = (month, year) => {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+    const daysInMonth = endDate.getDate();
+    const firstDayOfMonth = startDate.getDay();
 
-      const monthEvents = events.filter(event => {
-        const eventStart = new Date(event.start);
-        const eventEnd = new Date(event.end);
-        const monthStart = new Date(year, month - 1, 1);
-        const monthEnd = new Date(year, month, 0, 23, 59, 59);
-        return eventStart <= monthEnd && eventEnd >= monthStart;
-      });
+    const monthEvents = events.filter(event => {
+      const eventStart = new Date(event.start);
+      const eventEnd = new Date(event.end);
+      const monthStart = new Date(year, month - 1, 1);
+      const monthEnd = new Date(year, month, 0, 23, 59, 59);
 
-      if (monthEvents.length === 0) return null;
+      return eventStart <= monthEnd && eventEnd >= monthStart;
+    });
 
-      const allWeekSegments = monthEvents.flatMap(event =>
-        splitEventIntoWeeks(event, month)
+
+    if (monthEvents.length === 0) return null;
+
+    const allWeekSegments = monthEvents.flatMap(event =>
+      splitEventIntoWeeks(event, month)
+    );
+
+    const weekGroups = new Map();
+    allWeekSegments.forEach(segment => {
+      const week = segment.week;
+      if (!weekGroups.has(week)) {
+        weekGroups.set(week, []);
+      }
+      weekGroups.get(week).push(segment);
+    });
+
+    const weekLayouts = new Map();
+    let monthMaxRow = 0;
+
+    weekGroups.forEach((weekEvents, week) => {
+      const { rows, maxRow } = calculateWeekLayout(weekEvents);
+      weekLayouts.set(week, rows);
+      monthMaxRow = Math.max(monthMaxRow, maxRow);
+    });
+
+    // Calculate cell height based on maximum number of events
+    const getScaledCellHeight = (maxRows) => {
+      const contentHeight = (maxRows + 1) * baseRowHeight * zoomLevel;
+      return Math.max(baseCellHeight * zoomLevel, contentHeight + headerHeight);
+    };
+
+    const days = [];
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      days.push(
+        <div
+          key={`empty-${i}`}
+          className="relative dark:bg-gray-800"
+          style={{
+            height: `${dimensions.cellHeight}px`,
+            width: `${dimensions.cellWidth}px`
+          }}
+        >
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-gray-600 dark:text-gray-600"
+              style={{ transform: `scale(${zoomLevel})` }}></span>
+          </div>
+        </div>
       );
+    }
 
-      const weekGroups = new Map();
-      allWeekSegments.forEach(segment => {
-        const week = segment.week;
-        if (!weekGroups.has(week)) {
-          weekGroups.set(week, []);
-        }
-        weekGroups.get(week).push(segment);
-      });
+    const getDateSize = () => {
+      const cellSize = Math.min(dimensions.cellHeight, dimensions.cellWidth);
+      return Math.floor(cellSize *.6);
+    };
 
-      const weekLayouts = new Map();
-      let monthMaxRow = 0;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const currentDate = new Date(year, month - 1, day);
+      const lunarDate = getLunarDay(currentDate);
 
-      weekGroups.forEach((weekEvents, week) => {
-        const { rows, maxRow } = calculateWeekLayout(weekEvents);
-        weekLayouts.set(week, rows);
-        monthMaxRow = Math.max(monthMaxRow, maxRow);
-      });
+      days.push(
+        <div
+          key={day}
+          className="relative bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700"
+          style={{
+            height: `${dimensions.cellHeight}px`,
+            width: `${dimensions.cellWidth}px`
+          }}
+        >
+          <div className="absolute inset-0 flex flex-col items-center">
+            {/* 公曆日期 */}
+            <div
+              className="flex items-center justify-center flex-grow"
+              style={{ paddingTop: '8px' }}
+            >
+              <span
+                className="text-gray-600 dark:text-gray-500 font-light"
+                style={{
+                  fontSize: `${getDateSize()}px`,
+                  lineHeight: 1,
+                  opacity: 0.9
+                }}
+              >
+                {day}
+              </span>
+            </div>
+            {/* 農曆日期 */}
+            {lunarDate && (
+              <div
+                className="text-gray-500 dark:text-gray-400 pb-1"
+                style={{
+                  fontSize: `${Math.min(16, getDateSize() * 0.4)}px`,
+                  lineHeight: 1,
+                }}
+              >
+                {lunarDate}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
 
-      // 空白天數的填充
-      const days = [];
-      for (let i = 0; i < firstDayOfMonth; i++) {
-        days.push(
-          <div
-            key={`empty-${i}`}
-            className="relative dark:bg-gray-800"
-            style={{
-              width: `${dimensions.cellWidth}px`,
-              height: `${dimensions.cellHeight}px`
-            }}
+    const eventSegments = Array.from(weekGroups.entries()).map(([week, segments]) =>
+      segments.map(segment => {
+        const daysInSegment = Math.floor((segment.end - segment.start) / (24 * 60 * 60 * 1000)) + 1;
+        const row = weekLayouts.get(week).get(segment.id);
+        const weekOffset = week * getScaledCellHeight(monthMaxRow);
+
+        return (
+          <EventSegment
+            key={segment.id}
+            segment={segment}
+            startOffset={segment.start.getDay()}
+            daysInSegment={daysInSegment}
+            row={row}
+            weekOffset={weekOffset}
+            zoomLevel={zoomLevel}
+            onEdit={() => handleStartEditing(events.find(e => e.id === segment.originalEventId))}
+            onDelete={handleDeleteEvent}
           />
         );
-      }
+      })
+    );
 
-      // 月份天數的渲染
-      for (let day = 1; day <= daysInMonth; day++) {
-        const currentDate = new Date(year, month - 1, day);
-        const lunarDate = getLunarDay(currentDate);
-
-        days.push(
-          <div
-            key={day}
-            className="relative bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700"
-            style={{
-              width: `${dimensions.cellWidth}px`,
-              height: `${dimensions.cellHeight}px`
-            }}
-          >
-            <div className="absolute inset-0 flex flex-col items-center">
-              {/* 公曆日期 */}
-              <div
-                className="flex items-center justify-center flex-grow"
-                style={{ paddingTop: '8px' }}
-              >
-                <span
-                  className="text-gray-600 dark:text-gray-500 font-light"
-                  style={{
-                    fontSize: `${Math.min(dimensions.cellWidth * 0.4, 16 * zoomLevel)}px`,
-                    lineHeight: 1,
-                    opacity: 0.9
-                  }}
-                >
-                  {day}
-                </span>
-              </div>
-              {/* 農曆日期 */}
-              {lunarDate && (
-                <div
-                  className="text-gray-500 dark:text-gray-400 pb-1"
-                  style={{
-                    fontSize: `${Math.min(dimensions.cellWidth * 0.25, 12 * zoomLevel)}px`,
-                    lineHeight: 1,
-                  }}
-                >
-                  {lunarDate}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      }
-
-      // 事件分段的渲染
-      const eventSegments = Array.from(weekGroups.entries()).map(([week, segments]) =>
-        segments.map(segment => {
-          const daysInSegment = Math.floor((segment.end - segment.start) / (24 * 60 * 60 * 1000)) + 1;
-          const row = weekLayouts.get(week).get(segment.id);
-          const weekOffset = week * dimensions.cellHeight;
-
-          return (
-            <EventSegment
-              key={segment.id}
-              segment={segment}
-              startOffset={segment.start.getDay()}
-              daysInSegment={daysInSegment}
-              row={row}
-              weekOffset={weekOffset}
-              zoomLevel={zoomLevel}
-              onEdit={() => handleStartEditing(events.find(e => e.id === segment.originalEventId))}
-              onDelete={handleDeleteEvent}
-            />
-          );
-        })
-      );
-
-      return (
-        <MonthGrid
-          month={month}
-          year={year}
-          days={days}
-          dimensions={dimensions}
-          zoomLevel={zoomLevel}
-          weekGroups={weekGroups}
-          weekLayouts={weekLayouts}
-          monthMaxRow={monthMaxRow}
-        >
-          {eventSegments}
-        </MonthGrid>
-      );
-    };
+    return (
+      <MonthGrid
+        month={month}
+        year={year}
+        days={days}
+        zoomLevel={zoomLevel}
+        weekGroups={weekGroups}
+        weekLayouts={weekLayouts}
+        scaledWidth={dimensions.cellWidth * 7}
+      >
+        {eventSegments}
+      </MonthGrid>
+    );
+  };
 
   const layoutConfig = useMemo(() => {
     if (!windowSize.width) return { gridStyle: {}, optimalZoom: 1 };
