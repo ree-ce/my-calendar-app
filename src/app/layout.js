@@ -64,6 +64,12 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="en" suppressHydrationWarning>
+      <head><link
+        href={process.env.NODE_ENV === 'production'
+          ? '/my-calendar-app/globals.css'
+          : '/globals.css'}
+        rel="stylesheet"
+      /></head>
       <body className={`${inter.className} bg-background text-foreground antialiased`}>
         <div className="fixed top-4 right-4 z-[100]">
           <DropdownMenu>
